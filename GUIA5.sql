@@ -88,10 +88,33 @@ DEALLOCATE cursorTipos
 
 --- EJERCICIO 4 ---
 
-SELECT a.au_id,a.au_fname||', '||a.au_lname as NOMBRE,a.city FROM authors a
+DECLARE cursorA CURSOR
+    FOR 
+	SELECT a.au_id,a.au_lname,a.city FROM authors a;
 
-SELECT authors.au_id, publishers.city FROM authors 
-            INNER JOIN titleauthor ON authors.au_id = titleauthor.au_id
-            INNER JOIN titles ON titleauthor.title_id = titles.title_id
-            INNER JOIN publishers ON titles.pub_id = publishers.pub_id
-           
+DECLARE @idAutor varchar(11),
+        @nombreAutor char(120),
+        @cuidadAutor char(20);
+
+OPEN cursorA
+
+FETCH NEXT  
+    FROM cursorA
+    INTO @idAutor, @nombreAutor, @cuidadAutor
+WHILE @@fetch_status = 0
+    BEGIN
+        IF @cuidadAutor IN (SELECT authors.au_id, publishers.city FROM authors 
+                            INNER JOIN titleauthor ON authors.au_id = titleauthor.au_id
+                            INNER JOIN titles ON titleauthor.title_id = titles.title_id
+                            INNER JOIN publishers ON titles.pub_id = publishers.pub_id
+	                        WHERE authors.au_id = @idAutor)
+            print 'El Autor '+ @nombreAutor + ' Vive en la misma Cuidad que publican sus Publicaciones'
+        FETCH NEXT  
+        FROM cursorA
+        INTO @idAutor, @nombreAutor, @cuidadAutor
+    END
+CLOSE cursorA
+DEALLOCATE cursorA
+
+
+
