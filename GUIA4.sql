@@ -32,7 +32,12 @@ ALTER PROCEDURE buscarPrecio (
 )
 AS
 	SELECT @precio_title = titles.price FROM titles WHERE titles.title_id = @codigo_title
-	RETURN 
+
+	IF @@ROWCOUNT = 0
+		RETURN 70
+	IF @precio_title IS NULL
+		RETURN 71
+	RETURN 0
 	
 DECLARE @precio float
 EXECUTE buscarPrecio  'PS1372', @precio OUTPUT
