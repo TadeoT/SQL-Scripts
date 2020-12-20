@@ -76,30 +76,65 @@ CREATE PROCEDURE buscarPrecio(
 	AS
 	
 	select @precio_producto = productos.precUnit from productos where productos.codProd = @codigo_producto
-	return
+	if @@RowCount = 0
+		begin 
+			print 'no se encontro producto para el id ' + CONVERT(varchar,@codigo_producto)
+			return 1
+		END
+	if @precio_producto = NULL
+		begin 
+			print 'el producto '+ @codigo_producto + ' no tiene precio'
+			return 2
+		END
+	return 0
 	
 DECLARE @precio_obtenido FLOAT
 EXECUTE buscarPrecio 10 , @precio_obtenido OUTPUT
 SELECT 'El precio del producto es ' + CONVERT(VARCHAR,@precio_obtenido)
 
 DROP PROCEDURE insertarDetalle
-CREATE PROCEDURE insertarDetalle(
+ALTER PROCEDURE insertarDetalle(
 	@codigo_detalle int,
 	@numero_pedido int,
 	@codigo_producto int,
 	@cantidad int
 	)
 	AS
-	DECLARE @precio_producto FLOAT
-	EXECUTE buscarprecio @codigo_producto, @precio_producto OUTPUT
-	
-	
-		INSERT detalle VALUES (@codigo_detalle,@numero_pedido,@codigo_producto,@cantidad,@cantidad*@precio_producto)
-		if @@RowCount = 1
-			PRINT 'Se inserto una Fila '
-		RETURN
-		
+	DECLARE @precio_producto FLOAT,
+			@retorno int
+	EXECUTE @retorno = buscarprecio @codigo_producto, @precio_producto OUTPUT
 
+		if @retorno = 1
+			begin
+				print 'retorno 1'
+				return
+			END
+		if @retorno = 2
+			begin
+				print 'retorno 2'
+				return
+			END
+		if @retorno = 0
+			begin 
+				declare @stockViejo int,
+						@stockNuevo int
+				select @stockViejo = productos.stock FROM productos where productos.codProd = @codigo_producto
+				set @stockNuevo = (@stockViejo - @cantidad)
+				PRINT 'stock viejo '+ CONVERT(VARCHAR,@stockViejo) + ', el stock nuevo es ' +CONVERT(VARCHAR,@stockNuevo)
+				BEGIN TRY
+					BEGIN TRANSACTION 
+						UPDATE productos set productos.stock = @stockNuevo where productos.codProd = @codigo_producto
+						INSERT detalle VALUES (@codigo_detalle,@numero_pedido,@codigo_producto,@cantidad,@cantidad*@precio_producto)
+					COMMIT TRANSACTION 
+				END TRY
+				BEGIN CATCH 
+					PRINT 'NO SE PUDO REALIZAR LA OPERACION'
+					ROLLBACK TRANSACTION 
+					RETURN
+				END CATCH
+				if @@RowCount = 1
+					PRINT 'Se inserto una Fila '
+				RETURN
+				end
 select * from detalle
 EXECUTE insertarDetalle 1540, 120, 10, 2
-

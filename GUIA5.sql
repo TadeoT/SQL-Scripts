@@ -117,4 +117,38 @@ CLOSE cursorA
 DEALLOCATE cursorA
 
 
+--- EJERCICIO 5----
 
+DECLARE cEmpleado cursor
+		for select emp_id, hire_date, pub_id from employee where job_id = 5
+DECLARE @fecha_contratado date,
+		@id_editorial char(4),
+		@id_empleado char(9),
+		@fecha_antigua date,
+		@id_seleccionado char(9);
+set @fecha_antigua = CURRENT_TIMESTAMP;
+OPEN cEmpleado
+
+FETCH NEXT from cEmpleado INTO @id_empleado, @fecha_contratado, @id_editorial
+while @@FETCH_STATUS = 0
+	begin
+		if @id_editorial IN (select TOP 2 t.pub_id as VENDIDO from titles t
+				INNER JOIN sales on t.title_id = sales.title_id
+				INNER JOIN publishers on t.pub_id = publishers.pub_id
+				group by t.pub_id
+				ORDER BY SUM(t.price*sales.qty) ) 
+				BEGIN
+				if @fecha_contratado < @fecha_antigua
+					BEGIN
+						set @id_seleccionado = @id_empleado
+						set @fecha_antigua = @fecha_contratado
+
+					END
+				
+				END
+	FETCH NEXT from cEmpleado INTO @id_empleado, @fecha_contratado, @id_editorial
+	
+	end
+close cEmpleado
+deallocate cEmpleado
+SELECT * FROM employee where employee.emp_id = @id_seleccionado
